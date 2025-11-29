@@ -65,6 +65,20 @@ public class MatrizDeAdjacencia implements Grafo {
         return grau; 
     }
 
+    public int grauDeSaidaDoVertice(Vertice vertice) throws Exception{
+        if (vertice.id() < 0 || vertice.id() >= this.numVertices) { // caso o vértice não exista
+            throw new Exception("Vértice não existe.");
+        }
+
+        int grau = 0; // inicializa o grau do vértice
+        for (int j = 0; j < this.numVertices; j++) { // percorre a linha correspondente ao vértice
+            if (this.matriz[vertice.id()][j] != Double.MAX_VALUE && vertice.id() != j) { // se existir aresta na linha incrementa o grau
+                grau++;
+            }
+        }
+        return grau; 
+    }
+
     @Override
     public int numeroDeVertices(){
         return this.numVertices;
