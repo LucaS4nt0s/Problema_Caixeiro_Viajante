@@ -4,16 +4,15 @@ import java.util.ArrayList;
 
 import criarGrafo.MatrizDeAdjacencia;
 import grafos.FileManager;
-import grafos.Grafo;
 import grafos.Vertice;
-import java.lang.reflect.Array;
-import java.util.Random;
+import java.util.Arrays;
 
 public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
-    private Grafo grafo;
-    private final int tamanhoDaPopulacao = 10;
+    private MatrizDeAdjacencia grafo;
+    private final int tamanhoDaPopulacao = 200;
+    Vertice[][] populacao = new Vertice[this.tamanhoDaPopulacao][grafo.numeroDeVertices()];
 
     public AlgortimoGenetico() {
         try {
@@ -21,9 +20,20 @@ public class AlgortimoGenetico {
         } catch (Exception e) {
             System.out.println("Erro ao carregar o grafo: " + e.getMessage());
         }
+
+        ArrayList<Vertice> vertices = grafo.vertices();
+
+        java.util.Collections.shuffle(vertices);
+
+        for(int i = 0; i < this.tamanhoDaPopulacao; i++){
+            for(int j = 0; j < grafo.numeroDeVertices(); j++){
+                this.populacao[i][j] = vertices.get(j);
+            }
+            java.util.Collections.shuffle(vertices);
+        }
     }
 
-    public Grafo carregarGrafo() throws Exception {
+    private MatrizDeAdjacencia carregarGrafo() throws Exception {
         FileManager fileManager = new FileManager();
         ArrayList<String> conteudo = fileManager.stringReader(this.caminhoDoArquivo); // lê o conteúdo do arquivo e armazena em uma lista de strings
         
@@ -62,41 +72,128 @@ public class AlgortimoGenetico {
     }
 
     public void algoritmoGenetico(){
-        Vertice[][] populacao = new Vertice[this.tamanhoDaPopulacao][this.grafo.numeroDeVertices()];
-        Boolean[] jaInserido = new Boolean[this.grafo.numeroDeVertices()];
+       
+    }
 
-        for (int i = 0; i < this.tamanhoDaPopulacao; i++){
-            for (int j = 0; j < this.grafo.numeroDeVertices(); j++){
-                if(j == 0){
-                    Random rand = new Random();
-                    int randomIndex = rand.nextInt(this.grafo.numeroDeVertices());
-                    populacao[i][j] = new Vertice(randomIndex);
-                    jaInserido[randomIndex] = true;
-                }else{
-                    
+    private void populacaoInicial(){
+        ArrayList<Vertice> vertices = grafo.vertices(); // cria uma lista com os vértices do grafo
+        Vertice inicial = vertices.get(0); // define o vértice inicial
+        vertices.remove(0); // remove o vértice inicial da lista
+        java.util.Collections.shuffle(vertices); // embaralha a lista de vértices
+
+        for(int i = 0; i < this.tamanhoDaPopulacao; i++){ // para cada indivíduo da população
+            for(int j = 0; j < grafo.numeroDeVertices(); j++){ // para cada posição do indivíduo
+                if(j==0){ // se for a primeira posição, define o vértice inicial
+                    this.populacao[i][j] = inicial; 
+                } else{ // caso contrário, preenche com os vértices embaralhados
+                    this.populacao[i][j] = vertices.get(j-1);
                 }
-
             }
+            java.util.Collections.shuffle(vertices); // embaralha a lista de vértices novamente para o próximo indivíduo
         }
     }
 
-    public void gerarPopulacaoInicial(){
+    private double[] avaliarPopulacao(Vertice[][] populacao){
+        double fitness[] = new double[this.tamanhoDaPopulacao]; // vetor para armazenar o custo de cada indivíduo
 
+        for (int i = 0; i < this.tamanhoDaPopulacao; i++){ // para cada indivíduo da população
+            double custoCaminho = 0; // inicializa (reinicializa) o custo do caminho
+
+            for (int j = 0; j < grafo.numeroDeVertices(); j++){ // para cada vértice do indivíduo
+                try { // tenta obter o peso da aresta entre o vértice atual e o próximo
+                    if(j == grafo.numeroDeVertices() -1){
+                        custoCaminho += grafo.arestasEntre(populacao[i][populacao[i].length -1], populacao[i][0]).get(0).peso(); // adiciona o peso da aresta que fecha o ciclo
+                    } else{
+                        custoCaminho += grafo.arestasEntre(populacao[i][j], populacao[i][j+1]).get(0).peso(); // adiciona o peso da aresta ao custo do caminho
+                    }
+                } catch (Exception e) {
+                    custoCaminho = Double.MAX_VALUE; // se não houver aresta, atribui custo máximo
+                    break; // sai do loop interno pois ja é o peso máximo (não faz sentido continuar somando)
+                }
+            }
+
+            fitness[i] = custoCaminho; // armazena o custo do caminho no vetor de fitness correspondente a posição do indivíduo
+        }
+        return fitness; // retorna o vetor de fitness com os custos de cada indivíduo
+    }
+
+    private double[] calculoProbabilidades(Vertice[][] populacao, double[] fitness){
+        double probabilidades[] = new double[this.tamanhoDaPopulacao]; // vetor para armazenar as probabilidades de seleção
+        double aptidao[] = new double[this.tamanhoDaPopulacao]; // vetor para armazenar a aptidão de cada indivíduo
+        double somaFitnessInvertida = 0; // variável para armazenar a soma dos fitness
+        for (int i = 0; i < this.tamanhoDaPopulacao; i++) {
+            if(fitness[i] >= Double.MAX_VALUE - 1){ // para precisão
+                aptidao[i] = 0.0; // se o fitness for infinito, considera como 0 de aptidão
+            } else{
+                aptidao[i] = 1 / (fitness[i] + 0.0001); // calcula a aptidão como o inverso do fitness (com um pequeno valor para evitar divisão por zero)
+            }
+            somaFitnessInvertida += 1/ aptidao[i]; // calcula a soma dos fitness
+        }
+        for (int i = 0; i < this.tamanhoDaPopulacao; i++) {
+            probabilidades[i] = aptidao[i] / somaFitnessInvertida; // calcula a probabilidade de seleção para cada indivíduo
+        }
+
+        return probabilidades; // retorna o vetor de probabilidades
+    }
+
+    private Vertice[][] selecaoPaisRoleta(Vertice[][] populacao, double[] probabilidades){
+        int n = probabilidades.length; // tamanho do vetor de probabilidades
+
+        double acumulada[] = new double[n]; // vetor para armazenar as probabilidades acumuladas
+        acumulada[0] = probabilidades[0]; // o primeiro valor acumulado é igual ao primeiro valor de probabilidade
+        for (int i = 1; i < n; i++) {
+            acumulada[i] = acumulada[i - 1] + probabilidades[i]; // calcula as probabilidades acumuladas
+        }
+
+        int indexPai1 = roletaBinaria(acumulada); // seleciona o índice do primeiro pai usando roleta binária
+        int indexPai2 = roletaBinaria(acumulada); // seleciona o índice do segundo pai usando roleta binária
+
+        if(indexPai1 == indexPai2){ // garante que os pais sejam diferentes
+            indexPai2 = (indexPai2 + 1) % n; // se forem iguais, seleciona o próximo indivíduo como segundo pai (pega a primeira posição se for o último)
+        }
+
+        return new Vertice[][] {populacao[indexPai1], populacao[indexPai2]}; // retorna os dois pais selecionados
     }
     
-    public void mutacaoInsercao(){
+    private int roletaBinaria(double[] acumulada){ // método de seleção por roleta usando busca binária para uso em seleção de pais
+        double r = Math.random() * acumulada[acumulada.length - 1]; // gera um número aleatório entre 0 e o último valor acumulado
+
+        int index = Arrays.binarySearch(acumulada, r); // realiza a busca binária para encontrar o índice correspondente
+
+        if (index < 0) {
+            index = Math.abs(index) - 1; // ajusta o índice se não encontrado
+        }
+
+        if (index >= acumulada.length) { 
+            index = acumulada.length - 1; // garante que o índice esteja dentro dos limites
+        }
+
+        return index;
+    }
+    
+    private Vertice[] recombinarPaisOX(Vertice[][] pais){
+        Vertice[] pai1 = pais[0];
+        Vertice[] pai2 = pais[1];
+        int n = pai1.length; // tamanho do indivíduo (número de vértices)
+
+        Vertice[] filho = new Vertice[n]; // cria o array para o filho
+
+        filho[0] = pai1[0]; // mantém o vértice inicial do pai1
+
+        return filho;
+    }
+
+    private void mutacaoInsercao(){
 
     }
 
-    public void mutacaoMistura(){
+    private void mutacaoMistura(){
+    }
+
+    private void mutacaoTroca(){
 
     }
 
-    public void mutacaoTroca(){
-
-    }
-
-    public void mutacaoInversao(){
-
+    private void mutacaoInversao(){
     }
 }

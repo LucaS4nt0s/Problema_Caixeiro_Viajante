@@ -7,10 +7,9 @@ public class Main {
         
         try {
             algoritmoOtimo = new AlgoritmoOtimo();
-            algoritmoOtimo.carregarGrafo();
 
             long startTime = System.currentTimeMillis();
-            double custoOtimo = algoritmoOtimo.getMelhorCusto(algoritmoOtimo.carregarGrafo());
+            double custoOtimo = algoritmoOtimo.getMelhorCusto(algoritmoOtimo.getGrafo());
             long endTime = System.currentTimeMillis();
             System.out.println("Custo Ótimo: " + custoOtimo);
             if(endTime - startTime < 1000){

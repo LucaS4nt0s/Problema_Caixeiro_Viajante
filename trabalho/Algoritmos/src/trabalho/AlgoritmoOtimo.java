@@ -15,7 +15,15 @@ public class AlgoritmoOtimo {
     private double melhorCusto;  
     private Vertice[] melhorCaminho;
 
-    public Grafo carregarGrafo() throws Exception {
+    public AlgoritmoOtimo() {
+        try {
+            this.grafo = carregarGrafo();
+        } catch (Exception e) {
+            System.out.println("Erro ao carregar o grafo: " + e.getMessage());
+        }
+    }
+
+    private MatrizDeAdjacencia carregarGrafo() throws Exception {
         FileManager fileManager = new FileManager();
         ArrayList<String> conteudo = fileManager.stringReader(this.caminhoDoArquivo); // lê o conteúdo do arquivo e armazena em uma lista de strings
         
@@ -53,7 +61,7 @@ public class AlgoritmoOtimo {
         return this.grafo;
     }
 
-    public Vertice definirVerticeInicial() {
+    private Vertice definirVerticeInicial() {
         ArrayList<Vertice> vertices = this.grafo.vertices();
         int menorGrau = Integer.MAX_VALUE;
         Vertice verticeInicial = null;
@@ -70,66 +78,6 @@ public class AlgoritmoOtimo {
         }
 
         return verticeInicial; 
-    }
-
-    public double arvoreGeradoraMinima(Grafo g) {
-        Collection<ArrayList<Vertice>> conjuntoVerticesAGM = new ArrayList<>(); // conjunto de vértices da árvore geradora mínima
-        Collection<Aresta> arestasX = new ArrayList<>(); // conjunto de arestas finais da árvore geradora mínima
-
-        for (Vertice v : g.vertices()) { // para cada vértice do grafo
-            ArrayList<Vertice> novoConjunto = new ArrayList<>(); // cria um novo conjunto de vértices
-            novoConjunto.add(v); // adiciona o vértice ao novo conjunto
-            conjuntoVerticesAGM.add(novoConjunto); // adiciona o novo conjunto à coleção de conjuntos
-        }
-
-        ArrayList<Aresta> arestasOrdenadasAGM = new ArrayList<>(todasAsArestas(g)); // obtém todas as arestas do grafo
-        arestasOrdenadasAGM.sort((a1, a2) -> Double.compare(a1.peso(), a2.peso())); // ordena as arestas pelo peso em ordem crescente   
-
-        for (Aresta a : arestasOrdenadasAGM) { // para cada aresta na lista ordenada
-            ArrayList<Vertice> conjuntoU = encontrarConjuntoPorID(conjuntoVerticesAGM, a.origem().id()); // encontra o conjunto do vértice de origem
-            ArrayList<Vertice> conjuntoV = encontrarConjuntoPorID(conjuntoVerticesAGM, a.destino().id()); // encontra o conjunto do vértice de destino
-
-            if (conjuntoU != conjuntoV) { // se os conjuntos forem diferentes, adiciona a aresta à árvore geradora mínima
-                arestasX.add(a); // adiciona a aresta ao conjunto final
-                
-                if(conjuntoU != null && conjuntoV != null) { // verifica se os conjuntos não são nulos
-                    conjuntoU.addAll(conjuntoV);  // une os dois conjuntos
-                }
-                conjuntoVerticesAGM.remove(conjuntoV);  // remove o conjuntoV da coleção de conjuntos
-            }
-        }
-
-        double custoTotal = 0; // inicializa o custo total como 0
-        for (Aresta a : arestasX) { // para cada aresta na coleção
-            custoTotal += a.peso(); // soma o peso da aresta ao custo total
-        }
-        return custoTotal; // retorna o custo total da árvore geradora mínima
-    }
-
-    private ArrayList<Vertice> encontrarConjuntoPorID(Collection<ArrayList<Vertice>> conjuntos, int id) {
-        for (ArrayList<Vertice> conjunto : conjuntos) { // para cada conjunto de vértices
-            for (Vertice v : conjunto) { // para cada vértice no conjunto
-                if (v.id() == id) { // se o ID do vértice corresponde ao ID procurado
-                    return conjunto; // retorna o conjunto encontrado
-                }
-            }
-        }
-        return null; // não encontrou o conjunto
-    }
-
-    private Collection<Aresta> todasAsArestas(Grafo g){
-        Collection<Aresta> arestas = new ArrayList<>(); // coleção para armazenar todas as arestas do grafo
-        for (Vertice u : g.vertices()) { // para cada vértice do grafo
-            try {
-                for (Vertice v : g.adjacentesDe(u)) { // para cada vértice adjacente
-                    ArrayList<Aresta> arestasEntre = g.arestasEntre(u, v); // obtém as arestas entre os dois vértices
-                    arestas.addAll(arestasEntre); // adiciona as arestas à coleção
-                }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        }
-        return arestas;
     }
 
     private double calcularCustoAGM(ArrayList<Vertice> caminhoParcial) {
@@ -153,7 +101,6 @@ public class AlgoritmoOtimo {
         menorPesoParaChegar[primeiro.id()] = 0;
 
         double custoAGM = 0;
-        int verticesIncluidos = 0;
         int totalVertices = caminhoParcial.size();
 
         for(int i = 0; i < totalVertices; i++) {
@@ -173,7 +120,6 @@ public class AlgoritmoOtimo {
 
             incluidoNaAGM[u] = true;
             custoAGM += minValor;
-            verticesIncluidos++;
 
             try {
                 Vertice verticeU = null;
@@ -281,9 +227,10 @@ public class AlgoritmoOtimo {
             System.out.println(e.getMessage());
         }
     }
+
     public double getMelhorCusto(Grafo grafo) {
         Vertice verticeInicial = definirVerticeInicial();
-        melhorCusto = Double.MAX_VALUE;
+        this.melhorCusto = Double.MAX_VALUE;
         this.melhorCaminho = new Vertice[this.grafo.numeroDeVertices()];
         calcularLimiteInicial(grafo, verticeInicial);
         Vertice[] caminhoAtual = new Vertice[this.grafo.numeroDeVertices()];
@@ -299,13 +246,13 @@ public class AlgoritmoOtimo {
         calcularAdjacentes(grafo, verticeInicial, caminhoAtual, 0, jaVisitado, 1);
 
         System.out.println("Melhor Caminho: ");
-        for (Vertice v : melhorCaminho) {
+        for (Vertice v : this.melhorCaminho) {
             System.out.print(v.id() + " => ");
         }
 
         System.out.println(verticeInicial.id());
 
-        return melhorCusto;
+        return this.melhorCusto;
     }
 
     private void calcularAdjacentes(Grafo grafo, Vertice verticeAtual, Vertice[] caminhoAtual, double custoAtual, Boolean[] jaVisitado, int indice) {
@@ -322,13 +269,13 @@ public class AlgoritmoOtimo {
             double custoConexao = calcularCustoConexao(verticeAtual, caminhoAtual[0], caminhoParcial);
             double custoEstimado = custoAtual + custoAGM + custoConexao;
 
-            if(custoEstimado >= melhorCusto) {
+            if(custoEstimado >= this.melhorCusto) {
                 return;
             }
         } else{
             try {
                 double pesoRetorno = this.grafo.arestasEntre(verticeAtual, caminhoAtual[0]).get(0).peso();
-                if (custoAtual + pesoRetorno >= melhorCusto) {
+                if (custoAtual + pesoRetorno >= this.melhorCusto) {
                     return;
                 }
             } catch (Exception e) {
@@ -342,8 +289,8 @@ public class AlgoritmoOtimo {
                 Aresta arestaRetorno = this.grafo.arestasEntre(verticeAtual, caminhoAtual[0]).get(0);
                 double custoTotal = custoAtual + arestaRetorno.peso();
 
-                if(custoTotal < melhorCusto) {
-                    melhorCusto = custoTotal;
+                if(custoTotal < this.melhorCusto) {
+                    this.melhorCusto = custoTotal;
                     System.arraycopy(caminhoAtual, 0, this.melhorCaminho, 0, caminhoAtual.length);
                 }
             } catch (Exception e) {
@@ -384,6 +331,10 @@ public class AlgoritmoOtimo {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public MatrizDeAdjacencia getGrafo() {
+        return this.grafo;
     }
 
 }
