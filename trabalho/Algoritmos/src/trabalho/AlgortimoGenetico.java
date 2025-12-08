@@ -1,11 +1,13 @@
 package trabalho;
 
-import java.util.ArrayList;
-
 import criarGrafo.MatrizDeAdjacencia;
 import grafos.FileManager;
 import grafos.Vertice;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AlgortimoGenetico {
 
@@ -180,20 +182,132 @@ public class AlgortimoGenetico {
 
         filho[0] = pai1[0]; // mantém o vértice inicial do pai1
 
+        int pontoCorte1 = 1 + (int) (Math.random() * (n - 1)); // gera o primeiro ponto de corte aleatório (não pode ser o primeiro)
+        int pontoCorte2 = 1 + (int) (Math.random() * (n - 1)); // gera o segundo ponto de corte aleatório (não pode ser o primeiro)
+
+        int comeco = Math.min(pontoCorte1, pontoCorte2); // determina o início do segmento
+        int fim = Math.max(pontoCorte1, pontoCorte2); // determina o fim do segmento
+
+        Set<Vertice> verticesNoFilho = new HashSet<>(); // conjunto para rastrear os vértices já adicionados ao filho em O(1)
+        verticesNoFilho.add(filho[0]); // adiciona o vértice inicial ao conjunto pois é fixo
+
+        for (int i = comeco; i <= fim; i++) {
+            filho[i] = pai1[i]; // copia o segmento do pai1 para o filho
+            verticesNoFilho.add(filho[i]); // adiciona o vértice ao conjunto
+        }
+
+        int indiceFilho = 1; // começa depois do vértice inicial
+
+        for(int i = 0; i < n; i++){
+            if(indiceFilho>= comeco && indiceFilho <= fim){
+                indiceFilho = fim + 1; // pula o segmento já preenchido
+                if(indiceFilho >= n){
+                    break; // se ultrapassar o tamanho, sai do loop
+                }
+            }
+
+            Vertice verticeCandidato = pai2[i]; // obtém o vértice candidato do pai2
+
+            if(!verticesNoFilho.contains(verticeCandidato)){ // se o vértice ainda não foi adicionado ao filho
+                filho[indiceFilho] = verticeCandidato; // adiciona o vértice ao filho
+                indiceFilho++; // avança para a próxima posição no filho
+            }
+        }
+
         return filho;
     }
 
-    private void mutacaoInsercao(){
+    private Vertice[] mutacaoInsercao(Vertice[] individuo){
+        int posOrigem = 1 + (int) (Math.random() * (individuo.length - 1)); // posição aleatória (não pode ser o primeiro e nem o último)
+        int posDestino = 1 + (int) (Math.random() * (individuo.length - 1));
 
+        while(posOrigem == posDestino){ // garante que as posições de origem e destino sejam diferentes
+            posDestino = 1 + (int) (Math.random() * (individuo.length - 1));
+        }
+
+        Vertice verticeASerMovido = individuo[posOrigem]; // vértice a ser movido
+
+        Vertice[] individuoAux = new Vertice[individuo.length]; // cria uma cópia do indivíduo para modificar
+        System.arraycopy(individuo, 0, individuoAux, 0, individuo.length); // copia o indivíduo original para a cópia
+
+        if(posOrigem < posDestino){ // se a posição de origem é menor que a posição de destino
+            System.arraycopy(individuo, posOrigem + 1, individuoAux, posOrigem, posDestino - posOrigem); // move os elementos entre posOrigem e posDestino para a esquerda
+        }else{
+            System.arraycopy(individuo, posDestino, individuoAux, posDestino + 1, posOrigem - posDestino); // move os elementos entre posDestino e posOrigem para a direita
+        }
+
+        individuoAux[posDestino] = verticeASerMovido; // insere o vértice movido na nova posição
+        return individuoAux;
     }
 
-    private void mutacaoMistura(){
+    private Vertice[] mutacaoMistura(Vertice[] individuo){
+        int pos1 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 1
+        int pos2 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 2
+
+        Vertice[] individuoAux = new Vertice[individuo.length]; // cria uma cópia do indivíduo para modificar
+        System.arraycopy(individuo, 0, individuoAux, 0, individuo.length); // copia o indivíduo original para a cópia
+
+        while(pos1 == pos2){ // se forem iguais sorteia até ser diferente
+            pos2 = 1 + (int) (Math.random() * (individuo.length - 1));
+        }
+
+        int comeco = Math.min(pos1, pos2); // define o início do segmento
+        int fim = Math.max(pos1, pos2); // define o fim do segmento
+        ArrayList<Vertice> segmento = new ArrayList<>(); // cria uma lista para armazenar o segmento
+
+        for(int i = comeco; i <= fim; i++){
+            segmento.add(individuoAux[i]); // adiciona os vértices ao segmento
+        }
+
+        Collections.shuffle(segmento); // embaralha o segmento
+        for(int i = comeco; i <= fim; i++){
+            individuoAux[i] = segmento.get(i - comeco); // insere o segmento embaralhado de volta ao vetor
+        }
+        return individuoAux;
     }
 
-    private void mutacaoTroca(){
+    private Vertice[] mutacaoTroca(Vertice[] individuo){
+        int pos1 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 1
+        int pos2 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 2
 
+        
+        Vertice[] individuoAux = new Vertice[individuo.length]; // cria uma cópia do indivíduo para modificar
+        System.arraycopy(individuo, 0, individuoAux, 0, individuo.length); // copia o indivíduo original para a cópia
+
+
+        while(pos1 == pos2){ // se forem iguais sorteia até ser diferente
+            pos2 = 1 + (int) (Math.random() * (individuo.length - 1));
+        }
+
+        Vertice temp = individuoAux[pos1];
+        individuoAux[pos1] = individuoAux[pos2];
+        individuoAux[pos2] = temp;
+
+        return individuoAux;
     }
 
-    private void mutacaoInversao(){
+    private Vertice[] mutacaoInversao(Vertice[] individuo){
+        int pos1 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 1
+        int pos2 = 1 + (int) (Math.random() * (individuo.length - 1)); // define a posicao 2
+
+        Vertice[] individuoAux = new Vertice[individuo.length]; // cria uma cópia do indivíduo para modificar
+        System.arraycopy(individuo, 0, individuoAux, 0, individuo.length); // copia o indivíduo original para a cópia
+
+        while(pos1 == pos2){ // se forem iguais sorteia até ser diferente
+            pos2 = 1 + (int) (Math.random() * (individuo.length - 1));
+        }
+
+        int comeco = Math.min(pos1, pos2); // define o início do segmento
+        int fim = Math.max(pos1, pos2); // define o fim do segmento
+
+        while(comeco < fim){ // enquanto comeco for menor que fim
+            Vertice temp = individuoAux[comeco]; // armazena temporariamente o vértice na posição comeco
+            individuoAux[comeco] = individuoAux[fim]; // substitui o vértice na posição comeco pelo vértice na posição fim
+            individuoAux[fim] = temp; // substitui o vértice na posição fim pelo vértice temporariamente armazenado
+            comeco++; // incrementa o índice comeco
+            fim--; // decrementa o indice fim
+        }
+
+        return individuoAux;
     }
 }
