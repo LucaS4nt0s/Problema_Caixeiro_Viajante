@@ -4,6 +4,19 @@ public class Main {
     
     public static void main(String[] args) {
         AlgoritmoOtimo algoritmoOtimo;
+        AlgortimoGenetico algoritmoGenetico;
+        
+        algoritmoGenetico = new AlgortimoGenetico();
+        long startTimeGenetico = System.currentTimeMillis();
+        algoritmoGenetico.algoritmoGenetico();
+        long endTimeGenetico = System.currentTimeMillis();
+        if(endTimeGenetico - startTimeGenetico < 1000){
+            System.out.println("Tempo de execução: " + (endTimeGenetico - startTimeGenetico) + " ms");
+        } else if(endTimeGenetico - startTimeGenetico < 60000){
+            System.out.println("Tempo de execução: " + ((endTimeGenetico - startTimeGenetico)/1000.0) + " s");
+        } else {
+            System.out.println("Tempo de execução: " + ((endTimeGenetico - startTimeGenetico)/60000.0) + " min");
+        }
         
         try {
             algoritmoOtimo = new AlgoritmoOtimo();

@@ -13,8 +13,8 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 200;
-    Vertice[][] populacao = new Vertice[this.tamanhoDaPopulacao][grafo.numeroDeVertices()];
+    private final int tamanhoDaPopulacao = 2000;
+    Vertice[][] populacao;
 
     public AlgortimoGenetico() {
         try {
@@ -22,6 +22,8 @@ public class AlgortimoGenetico {
         } catch (Exception e) {
             System.out.println("Erro ao carregar o grafo: " + e.getMessage());
         }
+
+        this.populacao = new Vertice[this.tamanhoDaPopulacao][grafo.numeroDeVertices()];
 
         ArrayList<Vertice> vertices = grafo.vertices();
 
@@ -74,7 +76,81 @@ public class AlgortimoGenetico {
     }
 
     public void algoritmoGenetico(){
+        int maxGeracoes = 1000; // alterar para calibrar o algoritmo (quantidade de gerações)
+        double taxaDeMutacao = 0.1; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
+        boolean elitismo = true; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
+        
+        populacaoInicial(); // cria a população inicial
+        double[] fitness = avaliarPopulacao(this.populacao); // avalia a população inicial
+
+        Vertice[] melhorSolucaoGlobal = null;
+        double melhorCustoGlobal = Double.MAX_VALUE;
        
+        int geracaoAtual = 0;
+
+        while(geracaoAtual < maxGeracoes){
+            int melhorIndice = obterIndiceMelhorIndividuo(fitness); // obtém o índice do melhor indivíduo da geração atual
+            double melhorCustoAtual = fitness[melhorIndice]; // obtém o custo do melhor indivíduo da geração atual
+
+            if(melhorCustoAtual < melhorCustoGlobal){ // se o melhor custo atual for melhor que o global
+                melhorCustoGlobal = melhorCustoAtual; // atualiza o melhor custo global
+                melhorSolucaoGlobal = this.populacao[melhorIndice].clone(); // atualiza a melhor solução global
+                System.out.println("Geração " + geracaoAtual + ": Melhor custo = " + melhorCustoGlobal);
+            }
+
+            Vertice[][] novaPopulacao = new Vertice[this.tamanhoDaPopulacao][grafo.numeroDeVertices()]; // cria a nova população
+            int indexNovaPopulacao = 0;
+
+            if(elitismo){ // se o elitismo estiver ativado, copia o melhor indivíduo para a nova população
+                novaPopulacao[0] = this.populacao[melhorIndice].clone(); // copia o melhor indivíduo para a nova população na posição 0
+                indexNovaPopulacao = 1; // começa a preencher a nova população a partir do índice 1
+            }
+
+            double[] probabilidades = calculoProbabilidades(fitness); // calcula as probabilidades de seleção
+
+            for(int i = indexNovaPopulacao; i < this.tamanhoDaPopulacao; i+=2){
+                Vertice[][] pais = selecaoPaisRoleta(this.populacao, probabilidades); // seleciona os pais usando roleta
+                Vertice[][] paisInvertidos = new Vertice[][] {pais[1], pais[0]}; // inverte a ordem dos pais para diversidade
+ 
+                Vertice[] filho1 = recombinarPaisOX(pais); // gera o primeiro filho pela recombinação OX
+                Vertice[] filho2 = recombinarPaisOX(paisInvertidos); // gera o segundo filho pela recombinação OX
+
+                if(Math.random() < taxaDeMutacao){
+                    filho1 = mutacaoInsercao(filho1); // aplica mutação por inserção no primeiro filho
+                    filho2 = mutacaoInsercao(filho2); // aplica mutação por inserção no segundo filho
+                }
+                novaPopulacao[i] = filho1;
+                if (i + 1 < this.tamanhoDaPopulacao) {
+                    novaPopulacao[i + 1] = filho2;
+                }
+            }   
+            this.populacao = novaPopulacao; // atualiza a população com a nova população
+            fitness = avaliarPopulacao(this.populacao); // avalia a nova população
+            geracaoAtual++; // incrementa a geração atual
+        }
+
+        System.out.println("\nAlgoritmo Genético finalizado após " + maxGeracoes + " gerações.");
+        System.out.println("Melhor solução encontrada:");
+        if(melhorSolucaoGlobal != null){
+            for(Vertice v : melhorSolucaoGlobal){
+                System.out.print(v.id() + " ");
+            }
+        }
+        System.out.println("\nCusto total: " + melhorCustoGlobal);
+    }
+
+    private int obterIndiceMelhorIndividuo(double[] fitness){
+        int melhorIndice = 0; // índice do melhor indivíduo
+        double melhorFitness = fitness[0]; // melhor fitness inicializado com o primeiro indivíduo
+
+        for (int i = 1; i < fitness.length; i++) { // percorre o vetor de fitness
+            if (fitness[i] < melhorFitness) { // se o fitness atual for melhor (menor)
+                melhorFitness = fitness[i]; // atualiza o melhor fitness
+                melhorIndice = i; // atualiza o índice do melhor indivíduo
+            }
+        }
+
+        return melhorIndice;
     }
 
     private void populacaoInicial(){
@@ -119,20 +195,26 @@ public class AlgortimoGenetico {
         return fitness; // retorna o vetor de fitness com os custos de cada indivíduo
     }
 
-    private double[] calculoProbabilidades(Vertice[][] populacao, double[] fitness){
+    private double[] calculoProbabilidades(double[] fitness){
         double probabilidades[] = new double[this.tamanhoDaPopulacao]; // vetor para armazenar as probabilidades de seleção
         double aptidao[] = new double[this.tamanhoDaPopulacao]; // vetor para armazenar a aptidão de cada indivíduo
-        double somaFitnessInvertida = 0; // variável para armazenar a soma dos fitness
+        double somaAptidao = 0; // variável para armazenar a soma dos fitness
+
         for (int i = 0; i < this.tamanhoDaPopulacao; i++) {
             if(fitness[i] >= Double.MAX_VALUE - 1){ // para precisão
                 aptidao[i] = 0.0; // se o fitness for infinito, considera como 0 de aptidão
             } else{
-                aptidao[i] = 1 / (fitness[i] + 0.0001); // calcula a aptidão como o inverso do fitness (com um pequeno valor para evitar divisão por zero)
+                aptidao[i] = 1.0 / (fitness[i] + 0.0001); // calcula a aptidão como o inverso do fitness (com um pequeno valor para evitar divisão por zero)
             }
-            somaFitnessInvertida += 1/ aptidao[i]; // calcula a soma dos fitness
+            somaAptidao += aptidao[i]; // calcula a soma dos fitness
         }
+
         for (int i = 0; i < this.tamanhoDaPopulacao; i++) {
-            probabilidades[i] = aptidao[i] / somaFitnessInvertida; // calcula a probabilidade de seleção para cada indivíduo
+            if(somaAptidao == 0){
+                probabilidades[i] = 0.0; // se a soma da aptidão for zero, todas as probabilidades são zero
+            } else{
+                probabilidades[i] = aptidao[i] / somaAptidao; // calcula a probabilidade de seleção para cada indivíduo
+            }
         }
 
         return probabilidades; // retorna o vetor de probabilidades
