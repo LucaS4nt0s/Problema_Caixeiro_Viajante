@@ -13,7 +13,7 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 2000;
+    private final int tamanhoDaPopulacao = 75;
     Vertice[][] populacao;
 
     public AlgortimoGenetico() {
@@ -77,8 +77,10 @@ public class AlgortimoGenetico {
 
     public void algoritmoGenetico(){
         int maxGeracoes = 1000; // alterar para calibrar o algoritmo (quantidade de gerações)
-        double taxaDeMutacao = 0.1; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
+        double taxaDeMutacao = 0.10; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
         boolean elitismo = true; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
+        int tipoMutacao = 3; // alterar para calibrar o algoritmo (1 = inserção, 2 = troca, 3 = inversão, 4 = mistura)
+        int tipoSelecao = 2; // alterar para calibrar o algoritmo (1 = roleta, 2 = torneio)
         
         populacaoInicial(); // cria a população inicial
         double[] fitness = avaliarPopulacao(this.populacao); // avalia a população inicial
@@ -109,21 +111,55 @@ public class AlgortimoGenetico {
             double[] probabilidades = calculoProbabilidades(fitness); // calcula as probabilidades de seleção
 
             for(int i = indexNovaPopulacao; i < this.tamanhoDaPopulacao; i+=2){
-                Vertice[][] pais = selecaoPaisRoleta(this.populacao, probabilidades); // seleciona os pais usando roleta
+
+                Vertice[][] pais;
+                if(tipoSelecao == 1){
+                    pais = selecaoPaisRoleta(this.populacao, probabilidades); // seleciona os pais pela roleta
+                } else{
+                    pais = selecaoPaisTorneio(this.populacao, fitness); // seleciona os pais pelo torneio
+                }
+
                 Vertice[][] paisInvertidos = new Vertice[][] {pais[1], pais[0]}; // inverte a ordem dos pais para diversidade
  
                 Vertice[] filho1 = recombinarPaisOX(pais); // gera o primeiro filho pela recombinação OX
                 Vertice[] filho2 = recombinarPaisOX(paisInvertidos); // gera o segundo filho pela recombinação OX
 
                 if(Math.random() < taxaDeMutacao){
-                    filho1 = mutacaoInsercao(filho1); // aplica mutação por inserção no primeiro filho
-                    filho2 = mutacaoInsercao(filho2); // aplica mutação por inserção no segundo filho
+                    switch (tipoMutacao) {
+                        case 1 -> {
+                            filho1 = mutacaoInsercao(filho1); // aplica mutação por inserção no primeiro filho
+                            filho2 = mutacaoInsercao(filho2); // aplica mutação por inserção no segundo filho
+                        }
+                        case 2 -> {
+                            filho1 = mutacaoTroca(filho1); // aplica mutação por troca no primeiro filho
+                            filho2 = mutacaoTroca(filho2); // aplica mutação por troca no segundo filho
+                        }
+                        case 3 -> {
+                            filho1 = mutacaoInversao(filho1); // aplica mutação por inversão no primeiro filho
+                            filho2 = mutacaoInversao(filho2); // aplica mutação por inversão no segundo filho
+                        }
+                        case 4 -> {
+                            filho1 = mutacaoMistura(filho1); // aplica mutação por mistura no primeiro filho
+                            filho2 = mutacaoMistura(filho2); // aplica mutação por mistura no segundo filho
+                        }
+                        default -> {
+                            filho1 = mutacaoInsercao(filho1); // aplica mutação por inserção no primeiro filho
+                            filho2 = mutacaoInsercao(filho2); // aplica mutação por inserção no segundo filho
+                        }
+                    }
                 }
                 novaPopulacao[i] = filho1;
                 if (i + 1 < this.tamanhoDaPopulacao) {
                     novaPopulacao[i + 1] = filho2;
                 }
             }   
+            
+            if(elitismo){
+                novaPopulacao[0] = otimizacaoLocal2Opt(novaPopulacao[0]); // aplica otimização local 2-opt no melhor indivíduo se elitismo estiver ativado
+            } else{
+                int indiceMelhorIndividuoNovaPopulacao = obterIndiceMelhorIndividuo(avaliarPopulacao(novaPopulacao));
+                novaPopulacao[indiceMelhorIndividuoNovaPopulacao] = otimizacaoLocal2Opt(novaPopulacao[indiceMelhorIndividuoNovaPopulacao]); // aplica otimização local 2-opt no melhor indivíduo da nova população
+            }
             this.populacao = novaPopulacao; // atualiza a população com a nova população
             fitness = avaliarPopulacao(this.populacao); // avalia a nova população
             geracaoAtual++; // incrementa a geração atual
@@ -154,21 +190,66 @@ public class AlgortimoGenetico {
     }
 
     private void populacaoInicial(){
+        this.populacao[0] = gerarIndividuoGuloso(); // gera o primeiro individuo da população inicial usando o método guloso
+        this.populacao[0] = otimizacaoLocal2Opt(this.populacao[0]); // aplica a otimização local 2-opt no indivíduo guloso
+
         ArrayList<Vertice> vertices = grafo.vertices(); // cria uma lista com os vértices do grafo
         Vertice inicial = vertices.get(0); // define o vértice inicial
         vertices.remove(0); // remove o vértice inicial da lista
-        java.util.Collections.shuffle(vertices); // embaralha a lista de vértices
 
-        for(int i = 0; i < this.tamanhoDaPopulacao; i++){ // para cada indivíduo da população
-            for(int j = 0; j < grafo.numeroDeVertices(); j++){ // para cada posição do indivíduo
-                if(j==0){ // se for a primeira posição, define o vértice inicial
-                    this.populacao[i][j] = inicial; 
-                } else{ // caso contrário, preenche com os vértices embaralhados
-                    this.populacao[i][j] = vertices.get(j-1);
+        for(int i = 1; i < this.tamanhoDaPopulacao; i++){ // para cada indivíduo da população
+            Collections.shuffle(vertices); // embaralha os vértices restantes
+
+            this.populacao[i][0] = inicial; // define o vértice inicial do indivíduo
+            for(int j = 1; j < grafo.numeroDeVertices(); j++){
+                this.populacao[i][j] = vertices.get(j - 1); // preenche o restante do indivíduo com os vértices embaralhados
+            }
+        }
+    }
+
+    private Vertice[] gerarIndividuoGuloso(){
+        int n = grafo.numeroDeVertices();
+        Vertice[] individuo = new Vertice[n];
+        Set<Integer> visitados = new HashSet<>();
+
+        Vertice atual = grafo.vertices().get(0); // começa pelo primeiro vértice
+        individuo[0] = atual;
+        visitados.add(atual.id());
+
+        for(int i = 1; i < n; i++){
+            Vertice proximo = null;
+            double menorPeso = Double.MAX_VALUE;
+
+            for(Vertice candidato : grafo.vertices()){
+                if(!visitados.contains(candidato.id())){ // se o vértice ainda não foi visitado
+                    try {
+                        double peso = grafo.arestasEntre(atual, candidato).get(0).peso(); // obtém o peso da aresta entre o vértice atual e o candidato
+                        if(peso < menorPeso){ // se o peso for menor que o menor peso encontrado
+                            menorPeso = peso; // atualiza o menor peso
+                            proximo = candidato; // atualiza o próximo vértice
+                        }
+                    } catch (Exception e) {
+                        // se não houver aresta, ignora o candidato
+                    }
                 }
             }
-            java.util.Collections.shuffle(vertices); // embaralha a lista de vértices novamente para o próximo indivíduo
+
+            if(proximo == null){
+                for(Vertice v : grafo.vertices()){
+                    if(!visitados.contains(v.id())){
+                        proximo = v;
+                        break;
+                    }
+                }
+            }
+            
+            individuo[i] = proximo;
+            if(proximo != null){
+                visitados.add(proximo.id());
+            }
+            atual = proximo;
         }
+        return individuo;
     }
 
     private double[] avaliarPopulacao(Vertice[][] populacao){
@@ -254,6 +335,27 @@ public class AlgortimoGenetico {
 
         return index;
     }
+
+    private Vertice[][] selecaoPaisTorneio(Vertice[][] populacao, double[] fitness){
+        Vertice[] pai1 = realizarTorneio(populacao, fitness); // seleciona o primeiro pai pelo torneio
+        Vertice[] pai2 = realizarTorneio(populacao, fitness); // seleciona o segundo pai pelo torneio
+        return new Vertice[][] {pai1, pai2}; // retorna os dois pais selecionados
+    }
+
+    private Vertice[] realizarTorneio(Vertice[][] populacao, double[] fitness){
+        int tamanhoTorneio = 3; // define o tamanho do torneio
+        int melhorIndice = -1; // índice do melhor indivíduo no torneio
+        double melhorFitness = Double.MAX_VALUE; // melhor fitness inicializado com o valor máximo
+
+        for (int i = 0; i < tamanhoTorneio; i++) {
+            int indiceAleatorio = (int) (Math.random() * this.tamanhoDaPopulacao); // seleciona um índice aleatório da população
+            if (melhorIndice == -1 || fitness[indiceAleatorio] < melhorFitness) { // se o fitness do indivíduo selecionado for melhor que o melhor fitness atual
+                melhorFitness = fitness[indiceAleatorio]; // atualiza o melhor fitness
+                melhorIndice = indiceAleatorio; // atualiza o índice do melhor indivíduo
+            }
+        }
+        return populacao[melhorIndice]; // retorna o melhor indivíduo do torneio
+    }
     
     private Vertice[] recombinarPaisOX(Vertice[][] pais){
         Vertice[] pai1 = pais[0];
@@ -283,9 +385,10 @@ public class AlgortimoGenetico {
         for(int i = 0; i < n; i++){
             if(indiceFilho>= comeco && indiceFilho <= fim){
                 indiceFilho = fim + 1; // pula o segmento já preenchido
-                if(indiceFilho >= n){
-                    break; // se ultrapassar o tamanho, sai do loop
-                }
+            }
+
+            if(indiceFilho >= n){
+                break; // se ultrapassar o tamanho, sai do loop
             }
 
             Vertice verticeCandidato = pai2[i]; // obtém o vértice candidato do pai2
@@ -391,5 +494,67 @@ public class AlgortimoGenetico {
         }
 
         return individuoAux;
+    }
+
+    private Vertice[] otimizacaoLocal2Opt(Vertice[] individuo){
+        Vertice[] rota = individuo.clone(); // cria uma cópia do indivíduo para modificar
+        int n = rota.length;
+        boolean melhorou = true;
+
+        while (melhorou) {
+            melhorou = false;
+            for (int i = 1; i < n - 1; i++) {
+                for(int j = i + 1; j < n; j++){
+                    double delta = calcularGanho2Opt(rota, i, j);
+
+                    if (delta < -0.00001) { // se o custo diminuir (delta negativo)
+                        inverterSegmento(rota, i, j);
+                        melhorou = true;
+                    }
+                }
+            }
+        }
+        return rota;
+    }
+
+    private double calcularGanho2Opt(Vertice[] rota, int i, int j){
+        Vertice a = rota[i - 1];
+        Vertice b = rota[i];
+        Vertice c = rota[j];
+        Vertice d = (j == rota.length - 1) ? rota[0] : rota[j + 1];
+        
+        double peso1, peso2, peso3, peso4;
+        try {
+            peso1 = this.grafo.arestasEntre(a, b).get(0).peso();
+        } catch (Exception e) {
+            peso1 = Double.MAX_VALUE;
+        }
+        try {
+            peso2 = this.grafo.arestasEntre(c, d).get(0).peso();
+        } catch (Exception e) {
+            peso2 = Double.MAX_VALUE;
+        }
+        try {
+            peso3 = this.grafo.arestasEntre(a, c).get(0).peso();
+        } catch (Exception e) {
+            peso3 = Double.MAX_VALUE;
+        }
+        try {
+            peso4 = this.grafo.arestasEntre(b, d).get(0).peso();
+        } catch (Exception e) {
+            peso4 = Double.MAX_VALUE;
+        }
+    
+        return (peso3 + peso4) - (peso1 + peso2);
+    }
+
+    private void inverterSegmento(Vertice[] rota, int i, int j){
+        while (i < j) {
+            Vertice temp = rota[i];
+            rota[i] = rota[j];
+            rota[j] = temp;
+            i++;
+            j--;
+        }
     }
 }
