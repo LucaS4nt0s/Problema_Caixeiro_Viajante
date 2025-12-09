@@ -13,7 +13,7 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 75;
+    private final int tamanhoDaPopulacao = 400;
     Vertice[][] populacao;
 
     public AlgortimoGenetico() {
@@ -76,9 +76,9 @@ public class AlgortimoGenetico {
     }
 
     public void algoritmoGenetico(){
-        int maxGeracoes = 1000; // alterar para calibrar o algoritmo (quantidade de gerações)
-        double taxaDeMutacao = 0.10; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
-        boolean elitismo = true; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
+        int maxGeracoes = 7000; // alterar para calibrar o algoritmo (quantidade de gerações)
+        double taxaDeMutacao = 0.1; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
+        boolean elitismo = false; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
         int tipoMutacao = 3; // alterar para calibrar o algoritmo (1 = inserção, 2 = troca, 3 = inversão, 4 = mistura)
         int tipoSelecao = 2; // alterar para calibrar o algoritmo (1 = roleta, 2 = torneio)
         
@@ -343,7 +343,7 @@ public class AlgortimoGenetico {
     }
 
     private Vertice[] realizarTorneio(Vertice[][] populacao, double[] fitness){
-        int tamanhoTorneio = 3; // define o tamanho do torneio
+        int tamanhoTorneio = 2; // define o tamanho do torneio
         int melhorIndice = -1; // índice do melhor indivíduo no torneio
         double melhorFitness = Double.MAX_VALUE; // melhor fitness inicializado com o valor máximo
 
@@ -372,12 +372,12 @@ public class AlgortimoGenetico {
         int comeco = Math.min(pontoCorte1, pontoCorte2); // determina o início do segmento
         int fim = Math.max(pontoCorte1, pontoCorte2); // determina o fim do segmento
 
-        Set<Vertice> verticesNoFilho = new HashSet<>(); // conjunto para rastrear os vértices já adicionados ao filho em O(1)
-        verticesNoFilho.add(filho[0]); // adiciona o vértice inicial ao conjunto pois é fixo
+        Set<Integer> idsNoFilho = new HashSet<>(); // conjunto para rastrear os vértices já adicionados ao filho em O(1)
+        idsNoFilho.add(filho[0].id()); // adiciona o vértice inicial ao conjunto pois é fixo
 
         for (int i = comeco; i <= fim; i++) {
             filho[i] = pai1[i]; // copia o segmento do pai1 para o filho
-            verticesNoFilho.add(filho[i]); // adiciona o vértice ao conjunto
+            idsNoFilho.add(filho[i].id()); // adiciona o vértice ao conjunto
         }
 
         int indiceFilho = 1; // começa depois do vértice inicial
@@ -393,8 +393,9 @@ public class AlgortimoGenetico {
 
             Vertice verticeCandidato = pai2[i]; // obtém o vértice candidato do pai2
 
-            if(!verticesNoFilho.contains(verticeCandidato)){ // se o vértice ainda não foi adicionado ao filho
+            if(!idsNoFilho.contains(verticeCandidato.id())){ // se o vértice ainda não foi adicionado ao filho
                 filho[indiceFilho] = verticeCandidato; // adiciona o vértice ao filho
+                idsNoFilho.add(verticeCandidato.id()); // marca o id como adicionado
                 indiceFilho++; // avança para a próxima posição no filho
             }
         }
