@@ -13,7 +13,7 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 500; // alterar para calibrar o algoritmo (tamanho da população)
+    private final int tamanhoDaPopulacao = 600; // alterar para calibrar o algoritmo (tamanho da população)
     Vertice[][] populacao;
 
     public AlgortimoGenetico() {
@@ -76,8 +76,8 @@ public class AlgortimoGenetico {
     }
 
     public Vertice[] algoritmoGenetico(){
-        int maxGeracoes = 5000; // alterar para calibrar o algoritmo (quantidade de gerações)
-        double taxaDeMutacao = 0.15; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
+        int maxGeracoes = 2000; // alterar para calibrar o algoritmo (quantidade de gerações)
+        double taxaDeMutacao = 0.1; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
         boolean elitismo = false; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
         int tipoMutacao = 3; // alterar para calibrar o algoritmo (1 = inserção, 2 = troca, 3 = inversão, 4 = mistura)
         int tipoSelecao = 2; // alterar para calibrar o algoritmo (1 = roleta, 2 = torneio)
@@ -500,18 +500,28 @@ public class AlgortimoGenetico {
 
     private Vertice[] otimizacaoLocal2Opt(Vertice[] individuo){
         Vertice[] rota = individuo.clone(); // cria uma cópia do indivíduo para modificar
-        int n = rota.length;
         boolean melhorou = true;
 
-        while (melhorou) {
-            melhorou = false;
-            for (int i = 1; i < n - 1; i++) {
-                for(int j = i + 1; j < n; j++){
-                    double delta = calcularGanho2Opt(rota, i, j);
+        int iteracoes = 0; // contador de iterações
+        int maxIteracoes = 500; // limite de segurança para evitar loops infinitos
 
-                    if (delta < -0.00001) { // se o custo diminuir (delta negativo)
-                        inverterSegmento(rota, i, j);
-                        melhorou = true;
+        while (melhorou && iteracoes < maxIteracoes) {
+            iteracoes++;
+            melhorou = false;
+
+            double melhorCustoAtual = calcularCustoRota(rota);
+
+            for (int i = 1; i < rota.length - 1; i++) {
+                for(int j = i + 1; j < rota.length; j++){
+                    Vertice[] novaRota = rota.clone(); // cria uma cópia da rota atual
+                    inverterSegmento(novaRota, i, j);
+
+                    double novoCusto = calcularCustoRota(novaRota);
+
+                    if(novoCusto < melhorCustoAtual - 0.0001){ // se a nova rota for melhor que a atual
+                        rota = novaRota; // atualiza a rota para a nova rota otimizada
+                        melhorou = true; // marca que houve melhoria
+                        break; // sai do loop interno para reiniciar a busca
                     }
                 }
             }
@@ -519,35 +529,20 @@ public class AlgortimoGenetico {
         return rota;
     }
 
-    private double calcularGanho2Opt(Vertice[] rota, int i, int j){
-        Vertice a = rota[i - 1];
-        Vertice b = rota[i];
-        Vertice c = rota[j];
-        Vertice d = (j == rota.length - 1) ? rota[0] : rota[j + 1];
+    private double calcularCustoRota(Vertice[] rota){
+        double custo = 0.0;
         
-        double peso1, peso2, peso3, peso4;
-        try {
-            peso1 = this.grafo.arestasEntre(a, b).get(0).peso();
-        } catch (Exception e) {
-            peso1 = Double.MAX_VALUE;
+        for(int i = 0; i < rota.length; i++){
+            Vertice origem = rota[i]; // vértice atual
+            Vertice destino = rota[(i + 1) % rota.length]; // próximo vértice, voltando ao início se necessário
+
+            try {
+                custo += grafo.arestasEntre(origem, destino).get(0).peso(); // soma o peso da aresta ao custo total
+            } catch (Exception e) {
+                return Double.MAX_VALUE; // se não houver aresta, retorna custo máximo
+            }
         }
-        try {
-            peso2 = this.grafo.arestasEntre(c, d).get(0).peso();
-        } catch (Exception e) {
-            peso2 = Double.MAX_VALUE;
-        }
-        try {
-            peso3 = this.grafo.arestasEntre(a, c).get(0).peso();
-        } catch (Exception e) {
-            peso3 = Double.MAX_VALUE;
-        }
-        try {
-            peso4 = this.grafo.arestasEntre(b, d).get(0).peso();
-        } catch (Exception e) {
-            peso4 = Double.MAX_VALUE;
-        }
-    
-        return (peso3 + peso4) - (peso1 + peso2);
+        return custo;
     }
 
     private void inverterSegmento(Vertice[] rota, int i, int j){
