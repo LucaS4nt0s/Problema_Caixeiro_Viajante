@@ -17,10 +17,12 @@ public class Main {
 
         switch (escolha) {
             case 1 -> {
+                double melhorCaminho;
                 startTime = System.currentTimeMillis();
                 algoritmoOtimo = new AlgoritmoOtimo();
-                algoritmoOtimo.getMelhorCusto(algoritmoOtimo.getGrafo());
+                melhorCaminho = algoritmoOtimo.getMelhorCusto(algoritmoOtimo.getGrafo());
                 endTime = System.currentTimeMillis();
+                System.out.println("Melhor custo encontrado pelo Algoritmo Exato: " + melhorCaminho);
                 if (endTime - startTime >= 60000) {
                     System.out.println("Tempo de execução: " + (endTime - startTime) / 60000 + " minutos.");
                 } else if (endTime - startTime >= 1000) {
