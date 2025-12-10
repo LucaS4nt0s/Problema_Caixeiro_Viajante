@@ -13,7 +13,7 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 500;
+    private final int tamanhoDaPopulacao = 500; // alterar para calibrar o algoritmo (tamanho da população)
     Vertice[][] populacao;
 
     public AlgortimoGenetico() {

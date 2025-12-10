@@ -3,7 +3,6 @@ package trabalho;
 import java.util.Scanner;
 
 public class Main {
-    
     public static void main(String[] args) {
         AlgoritmoOtimo algoritmoOtimo;
         AlgortimoGenetico algoritmoGenetico;
