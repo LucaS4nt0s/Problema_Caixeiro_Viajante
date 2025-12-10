@@ -1,39 +1,50 @@
 package trabalho;
 
+import java.util.Scanner;
+
 public class Main {
     
     public static void main(String[] args) {
         AlgoritmoOtimo algoritmoOtimo;
         AlgortimoGenetico algoritmoGenetico;
+        Scanner Leitor = new Scanner(System.in);
+        long startTime, endTime;
         
-        algoritmoGenetico = new AlgortimoGenetico();
-        long startTimeGenetico = System.currentTimeMillis();
-        algoritmoGenetico.algoritmoGenetico();
-        long endTimeGenetico = System.currentTimeMillis();
-        if(endTimeGenetico - startTimeGenetico < 1000){
-            System.out.println("Tempo de execução: " + (endTimeGenetico - startTimeGenetico) + " ms");
-        } else if(endTimeGenetico - startTimeGenetico < 60000){
-            System.out.println("Tempo de execução: " + ((endTimeGenetico - startTimeGenetico)/1000.0) + " s");
-        } else {
-            System.out.println("Tempo de execução: " + ((endTimeGenetico - startTimeGenetico)/60000.0) + " min");
-        }
-        
-        try {
-            algoritmoOtimo = new AlgoritmoOtimo();
+        System.out.println("Qual algoritmo deseja executar?");
+        System.out.println("1 - Algoritmo Exato (Força Bruta)");
+        System.out.println("2 - Algoritmo Genético");
+        int escolha = Leitor.nextInt();
 
-            long startTime = System.currentTimeMillis();
-            double custoOtimo = algoritmoOtimo.getMelhorCusto(algoritmoOtimo.getGrafo());
-            long endTime = System.currentTimeMillis();
-            System.out.println("Custo Ótimo: " + custoOtimo);
-            if(endTime - startTime < 1000){
-                System.out.println("Tempo de execução: " + (endTime - startTime) + " ms");
-            } else if(endTime - startTime < 60000){
-                System.out.println("Tempo de execução: " + ((endTime - startTime)/1000.0) + " s");
-            } else {
-                System.out.println("Tempo de execução: " + ((endTime - startTime)/60000.0) + " min");
+        switch (escolha) {
+            case 1 -> {
+                startTime = System.currentTimeMillis();
+                algoritmoOtimo = new AlgoritmoOtimo();
+                algoritmoOtimo.getMelhorCusto(algoritmoOtimo.getGrafo());
+                endTime = System.currentTimeMillis();
+                if (endTime - startTime >= 60000) {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) / 60000 + " minutos.");
+                } else if (endTime - startTime >= 1000) {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) / 1000 + " segundos.");
+                } else {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) + " milissegundos.");
+                }
             }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+            case 2 -> {
+                startTime = System.currentTimeMillis();
+                algoritmoGenetico = new AlgortimoGenetico();
+                algoritmoGenetico.algoritmoGenetico();
+                endTime = System.currentTimeMillis();
+                if (endTime - startTime >= 60000) {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) / 60000 + " minutos.");
+                } else if (endTime - startTime >= 1000) {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) / 1000 + " segundos.");
+                } else {
+                    System.out.println("Tempo de execução: " + (endTime - startTime) + " milissegundos.");
+                }
+            }
+            default -> System.out.println("Opção inválida. Por favor, escolha 1 ou 2.");
         }
+
+        Leitor.close();
     }
 }

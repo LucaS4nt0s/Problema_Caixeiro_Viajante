@@ -13,7 +13,7 @@ public class AlgortimoGenetico {
 
     private final String caminhoDoArquivo = "trabalho/Algoritmos/CarregarGrafo/Grafo.txt";
     private MatrizDeAdjacencia grafo;
-    private final int tamanhoDaPopulacao = 400;
+    private final int tamanhoDaPopulacao = 500;
     Vertice[][] populacao;
 
     public AlgortimoGenetico() {
@@ -75,9 +75,9 @@ public class AlgortimoGenetico {
         return this.grafo;
     }
 
-    public void algoritmoGenetico(){
-        int maxGeracoes = 7000; // alterar para calibrar o algoritmo (quantidade de gerações)
-        double taxaDeMutacao = 0.1; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
+    public Vertice[] algoritmoGenetico(){
+        int maxGeracoes = 5000; // alterar para calibrar o algoritmo (quantidade de gerações)
+        double taxaDeMutacao = 0.15; // alterar para calibrar o algoritmo (0.05 = 5% de chance de mutação)
         boolean elitismo = false; // alterar para calibrar o algoritmo (se true, o melhor indivíduo de cada geração é mantido na próxima geração)
         int tipoMutacao = 3; // alterar para calibrar o algoritmo (1 = inserção, 2 = troca, 3 = inversão, 4 = mistura)
         int tipoSelecao = 2; // alterar para calibrar o algoritmo (1 = roleta, 2 = torneio)
@@ -173,6 +173,7 @@ public class AlgortimoGenetico {
             }
         }
         System.out.println("\nCusto total: " + melhorCustoGlobal);
+        return melhorSolucaoGlobal;
     }
 
     private int obterIndiceMelhorIndividuo(double[] fitness){
